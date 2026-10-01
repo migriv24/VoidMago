@@ -1,0 +1,115 @@
+{
+  "manifest": "void/0.1",
+  "name": "voidmago",
+  "display_name": "Void Mago",
+  "kind": "application",
+  "version": "0.1.8",
+  "license": "MIT",
+  "repository": "https://github.com/migriv24/VoidMago",
+  "description": "The keeper of the Void family: the registry of which versions work together, the installer it compiles from them, and the updater that never acts silently.",
+  "status": "alpha",
+
+  "requires": [],
+
+  "vendors": [
+    {
+      "name": "cJSON",
+      "version": "1.7.18",
+      "license": "MIT",
+      "upstream": "https://github.com/DaveGamble/cJSON",
+      "path": "vendor/cJSON.c",
+      "version_source": "vendor/cJSON.h",
+      "link": "source",
+      "note": "The same parser every other Void repository vendors, compiled in here rather than found on the machine. Built with CJSON_HIDE_SYMBOLS so it exports nothing: `mago` is statically linked into nothing, but the habit is what keeps six copies of one library from meeting in somebody else's binary."
+    }
+  ],
+
+  "interacts_with": [
+    {
+      "name": "*",
+      "kind": "any",
+      "seam": "void.json",
+      "direction": "inbound",
+      "note": "Mago reads every Void project's root manifest. That is the whole dependency: it resolves the family, it does not link it. This wildcard edge is excluded from blast-radius reporting -- reading a manifest is not a contract that can break, and nothing is downstream of the reading. A project that names Mago BACK, as FaultSack does, is a different matter: it parses the schema Mago defines, and it is a retest when Mago changes."
+    }
+  ],
+
+  "provides": {
+    "cli": "mago",
+    "gui": "voidmago-desktop",
+    "describe": "mago scan",
+    "documents": {
+      "manifest": "void.json",
+      "family": "family.json",
+      "roots": "roots.json under MAGO_HOME",
+      "plan": "*.plan.json",
+      "receipt": "mago-receipt.json",
+      "feed": "void-updates.json",
+      "notices": "THIRD-PARTY-NOTICES.md"
+    },
+    "effects": [
+      "scan",
+      "graph",
+      "doctor",
+      "plan",
+      "blast",
+      "notify",
+      "matrix",
+      "pair",
+      "register",
+      "roots",
+      "forget",
+      "stage",
+      "feed",
+      "vendors",
+      "notices",
+      "wizard"
+    ],
+    "library": "voidmago",
+    "contracts": {
+      "schema": "schema/void.schema.json",
+      "knowledge_bundle": "okf/"
+    },
+    "authored": [
+      "family.json"
+    ],
+    "artifacts": [
+      "mago-win-x64.exe",
+      "mago-macos-universal",
+      "mago-linux-x64"
+    ],
+    "ships_beside_binary": [
+      "schema/",
+      "okf/"
+    ]
+  },
+
+  "platforms": ["windows-x64", "macos-universal", "linux-x64"],
+
+  "version_sources": ["CMakeLists.txt"],
+
+  "release": {
+    "version": "0.1.8",
+    "previous": "0.1.7",
+    "change": "compatible",
+    "date": "2026-09-18",
+    "summary": "off Windows, the feed names the archive that actually exists, so `feed --artifacts` can hash it",
+    "adds": [],
+    "behavior_changes": [
+      {
+        "what": "installer_name() and stable_installer_name() now answer `<Base>-<version>-<platform>.tar.gz` and `<Base>-<platform>.tar.gz` for every non-Windows platform, where they answered `<Base>-<version>-<platform>-setup` with no extension. Windows is unchanged (`-setup.exe`). The old name was a file nobody built, so `feed --artifacts` hashed nothing and wrote `\"sha256\": null` for Linux.",
+        "who_is_affected": "any application listing a non-Windows platform in `platforms`. Void Hormiga is the one today: its 0.1.3 feed carried a Linux entry with no sha256, and its Linux client refused the update. Put the runner's .tar.gz archives into the `--artifacts` directory before running `mago feed`."
+      }
+    ],
+    "read_more": [
+      "okf/concepts/shipping.md"
+    ]
+  },
+
+  "update": {
+    "channel": "desktop",
+    "side_by_side": true,
+    "signed": "ed25519",
+    "note": "Mago updates itself by the same rule it applies to everything else: the person is told, and chooses. The CLI carries no dependencies at all -- not even Void Core -- and links its C++ runtime statically, because the tool that repairs a broken install must not need a working install to run."
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "family": "family/0.1",
+  "note": "The authored half of the family: what a person knows about a PAIR of projects, which belongs to neither repository's manifest. Nothing here is computed. `mago matrix` reads it; `mago pair` writes it.",
+  "projects": {},
+  "pairings": [
+    {
+      "pair": [
+        "faultsack",
+        "voidmaiz"
+      ],
+      "note": "An explicit non-client, stated in FaultSack's own manifest: a study and critique tool's UI is not a node canvas. The only contact is that FaultSack ingests the okf/surfaces/*.md a Maiz surface census produces, unchanged, because they are ordinary OKF concepts.",
+      "seam": "okf",
+      "shares": [
+        "OKF bundles"
+      ],
+      "status": "agreed",
+      "authored": "2026-09-04"
+    }
+  ]
+}

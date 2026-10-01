@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/migriv24/VoidMago/schema/void.schema.json",
+  "title": "void.json",
+  "description": "The manifest every Void project carries at its root. The build-time twin of --describe: --describe answers 'what can I do?' at runtime, this answers 'what am I, and what do I need?' before anything is built.",
+  "type": "object",
+  "required": ["manifest", "name", "kind", "version"],
+  "additionalProperties": true,
+  "properties": {
+    "manifest": {
+      "description": "Format version, so this file can change later without breaking readers.",
+      "const": "void/0.1"
+    },
+    "name": {
+      "description": "Machine name, lowercase, no spaces. The identity Mago resolves against.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "display_name": { "type": "string" },
+    "kind": {
+      "description": "Sorted by what a user experiences, not by how the code is shaped. A runtime is never a row in anybody's list of installed software; an application always is.",
+      "enum": ["runtime", "capability", "application"]
+    },
+    "version": {
+      "description": "Three parts. Below 1.0 the minor position is the break: 0.2.7 and 0.2.12 promise compatibility, 0.2.x and 0.3.0 do not.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+([-+].*)?$"
+    },
+    "license": { "type": "string", "description": "SPDX identifier." },
+    "repository": { "type": "string", "format": "uri" },
+    "description": { "type": "string" },
+    "status": { "type": "string", "examples": ["concept", "alpha", "released"] },
+
+    "requires": {
+      "description": "Real dependency edges. Mago resolves these, and `link` is the field that decides whether an upstream change costs a rebuild or only a re-ship.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "enum": ["runtime", "capability", "application"] },
+          "version": {
+            "description": "A floor or `*`. Mago intersects every constraint on a project and reports which one actually binds.",
+            "type": "string",
+            "pattern": "^(\\*|(>=|<=|==|=|>|<|\\^|~)?\\s*\\d+\\.\\d+\\.\\d+([-+].*)?)$"
+          },
+          "sibling": {
+            "description": "Relative path to the checkout during development, e.g. ../VoidCore.",
+            "type": "string"
+          },
+          "cmake_var": {
+            "description": "The variable a resolver sets to point a build at a specific checkout, without editing anybody's CMakeLists.txt.",
+            "type": "string"
+          },
+          "link": {
+            "description": "How the dependency is bound in, which is the field that decides what an upstream change costs. shared: a file ships beside the binary, and an additive change costs only a re-ship. static/source/vendored: the code is inside the consumer's build output, so any upstream change costs a rebuild, transitively. import: the consumer imports the dependency's source at runtime, the way a Python package imports another -- nothing is compiled and nothing of the dependency's ships, so an additive change is a retest and a breaking one is a port. Use `import` and not `source` for an interpreted consumer: `source` claims a binary that does not exist.",
+            "enum": ["shared", "static", "source", "vendored", "import"]
+          },
+          "via": {
+            "description": "Reached through another project's headers rather than directly.",
+            "type": "string"
+          },
+          "note": { "type": "string" }
+        }
+      }
+    },
+
+    "interacts_with": {
+      "description": "NOT dependencies. Data crosses, nothing links: a transcript one project emits and another replays, a conformance case format, a bundle. Recorded separately so the compatibility matrix does not invent edges that do not exist. A seam costs a retest, never a rebuild.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": { "type": "string", "description": "`*` means every Void project." },
+          "kind": { "type": "string" },
+          "seam": {
+            "description": "What the two ends actually exchange. Both ends should call it the same thing; `mago doctor` reports it when they disagree.",
+            "type": "string"
+          },
+          "direction": { "enum": ["inbound", "outbound", "both"] },
+          "note": { "type": "string" }
+        }
+      }
+    },
+
+    "provides": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "cli": { "type": "string" },
+        "gui": { "type": "string" },
+        "library": { "type": "string" },
+        "libraries": { "type": "array", "items": { "type": "string" } },
+        "abi": { "type": "string" },
+        "header": { "type": "string" },
+        "describe": { "type": "string" },
+        "documents": {
+          "description": "Document formats this project DEFINES, as label -> filename or glob. Ownership, not merely use: a seam named after one of these is a contract that can break when THIS project changes, and nothing at all when its readers do. That is what keeps `mago blast voidcore` from reporting a retest for every project that reads a void.json.",
+          "type": "object"
+        },
+        "effects": { "type": "array", "items": { "type": "string" } },
+        "contracts": { "type": "object" },
+        "artifacts": {
+          "description": "Prebuilt files a shared-link consumer ships. Name the platform in the filename; Mago matches on it.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "ships_beside_binary": {
+          "description": "Folders and files that must land next to the executable. A trailing / means a folder, copied recursively.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "vendors": {
+      "description": "Third-party code this project uses and does not own. `requires` is a Void project; this is everything else -- cJSON, SQLite, GLFW, Dear ImGui, libsodium, and the toolchain runtime that arrives whether anybody asked for it or not. The family vendors rather than resolves, and that rule was doing two jobs: deciding how third-party code is ACQUIRED (copied in, pinned, reviewed) and quietly deciding it need not be WRITTEN DOWN. Only the first was a good idea. Not called a `holiday`: Void Core's holiday is a runtime interface to an external SYSTEM, where all real I/O lives, and vendored source has no interface and no I/O.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "description": "As its authors spell it: `cJSON`, `Dear ImGui`. Grouped case- and punctuation-insensitively across the family, so drift cannot hide behind a spelling.",
+            "type": "string"
+          },
+          "version": {
+            "description": "Free text: third-party versions are not all semver. Its value is comparison against the other copies in the family, so any stable spelling works as long as everybody uses the same one.",
+            "type": "string"
+          },
+          "license": {
+            "description": "SPDX where there is one. Without it the library cannot appear in a notices file, and a notices file is a legal obligation rather than a nicety.",
+            "type": "string"
+          },
+          "upstream": { "type": "string", "description": "Where it came from." },
+          "path": {
+            "description": "Where the vendored copy lives, relative to this repository. One entry covers a library's several files: `vendor/cJSON.c` accounts for `vendor/cJSON.h` beside it.",
+            "type": "string"
+          },
+          "version_source": {
+            "description": "A file in this repository carrying the upstream's own version literal, for `mago doctor` to check the declared version against. Matched either literally (`\"3.45.1\"`) or split across macros the way cJSON writes it (MAJOR 1 / MINOR 7 / PATCH 18).",
+            "type": "string"
+          },
+          "link": {
+            "description": "How it reaches the consumer's binary. source/static/vendored/header-only are compiled in and ship no file of their own. shared ships a file. system is provided by the operating system and must NOT ship. toolchain comes from the compiler and is the dangerous one: it exists on the build machine and on no other, so it must be linked statically or shipped deliberately -- Void Hormiga's first package would have gone out without `libwinpthread-1.dll` for exactly this reason.",
+            "enum": ["source", "static", "shared", "vendored", "header-only", "system", "toolchain"]
+          },
+          "note": { "type": "string" }
+        }
+      }
+    },
+
+    "release": {
+      "description": "What THIS version did, declared by the person who did it. Everything else in a manifest is a standing fact; this block is the only part that describes an event. It exists because every verdict in a release broadcast is derivable from the manifests plus ONE fact a human supplies -- whether the change was additive or breaking -- and that one bit is a field a release can declare. With it, `mago blast <project>` needs no flags and `mago notify <project>` can write the whole broadcast.",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "description": "The version this release produced. Defaults to, and must equal, the manifest's own `version`.",
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+([-+].*)?$"
+        },
+        "previous": {
+          "description": "What consumers are moving FROM. Without it, blast and notify still need --to.",
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+([-+].*)?$"
+        },
+        "change": {
+          "description": "The one bit of judgement no manifest can derive. Omitted, it is inferred from the version numbers under the family's below-1.0 rule -- and an inference about a promise is a guess.",
+          "enum": ["compatible", "breaking"]
+        },
+        "date": { "type": "string" },
+        "summary": {
+          "description": "One line. It becomes the headline of every message this release sends.",
+          "type": "string"
+        },
+        "adds": {
+          "description": "New OPTIONAL surface: verbs, fields, files. Nobody must adopt any of it and no verdict changes if they do not -- but a resolver has nothing to say here and a notifier does.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "behavior_changes": {
+          "description": "Things that moved WITHOUT a signature moving. The category a dependency resolver structurally cannot see, and the one that bites: no version constraint is violated, every verdict stays correct, and a consumer breaks anyway. Each entry is an OBJECT; Mago refuses a bare string by name rather than skipping it, because a behavior change that is quietly absent is the warning that never arrived.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["what"],
+            "additionalProperties": true,
+            "properties": {
+              "what": { "type": "string" },
+              "who_is_affected": { "type": "string" }
+            }
+          }
+        },
+        "read_more": {
+          "description": "Where the argument is written down. Paths relative to this repository; a message rewrites them relative to whoever receives it.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "version_sources": {
+      "description": "Which files in this repository state the same version, for `mago doctor` to check the manifest against. Absent means the well-known ones (CMakeLists.txt, pyproject.toml, package.json, Cargo.toml). Present -- including present and empty -- is the project's own answer, for a repository that versions a subcomponent separately. Worth checking: Void Core shipped 0.2.14 with a void.json reading 0.2.12, and every verdict about a project is arithmetic over that number.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "platforms": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "examples": ["windows-x64", "macos-universal", "linux-x64", "android-arm64"]
+      }
+    },
+
+    "data": { "type": "object" },
+
+    "update": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "channel": { "type": "string", "examples": ["desktop", "store"] },
+        "side_by_side": {
+          "description": "A new version never destroys a working one. True everywhere in this family.",
+          "type": "boolean"
+        },
+        "signed": { "type": "string", "examples": ["ed25519"] },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}
