@@ -4,3 +4,4 @@ build-desktop/
 stage/
 imgui.ini
 __pycache__/
+KEEP_HIDDEN.txt
