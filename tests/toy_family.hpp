@@ -114,7 +114,9 @@ private:
 // `vendor/fonts/`, which has an interior separator to get wrong -- and the
 // NSIS emitter got it wrong, silently, all the way onto a stranger's
 // machine. The toy carries one now so nothing downstream can regress to
-// only ever seeing the easy shape.
+// only ever seeing the easy shape. It also ships one FILE inside a folder,
+// `guide/start.md`: Hormiga 0.2.3 listed its OKF by parts (`okf/index.md`),
+// and staging dropped the folder while the script kept it (2026-10-26).
 inline void write_toy(const TempDir& t) {
     t.project("core", R"("name":"core","display_name":"Core","kind":"runtime",
         "version":"1.2.0",
@@ -129,7 +131,7 @@ inline void write_toy(const TempDir& t) {
           {"name":"core","version":">=1.0.0","link":"shared"},
           {"name":"view","version":"*","link":"static"}],
         "provides":{"gui":"app","cli":"app-cli",
-          "ships_beside_binary":["docs/","vendor/fonts/"]},
+          "ships_beside_binary":["docs/","vendor/fonts/","guide/start.md"]},
         "identity":{"app_id":"org.example.app","publisher":"App"},
         "platforms":["windows-x64"])");
 }

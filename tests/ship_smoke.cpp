@@ -74,6 +74,7 @@ void staging_finds_the_files_a_plan_asks_for() {
     t.file("app/build/bin", "app.exe", "not really an exe");
     t.file("app/build/bin", "app-cli.exe", "not really an exe");
     t.file("app/docs", "readme.md", "hello");
+    t.file("app/guide", "start.md", "a file inside a folder");
     t.file("app/vendor/fonts", "icons.woff2", "not really a font");
 
     const Registry reg = Registry::scan(t.path());
@@ -98,6 +99,10 @@ void staging_finds_the_files_a_plan_asks_for() {
     // slash here, which is exactly why the emitter's failure to was invisible
     // to anything that only inspected this tree.
     CHECK(std::filesystem::exists(opt.out / "app" / "vendor" / "fonts" / "icons.woff2"));
+    // A FILE declared inside a folder keeps the folder too; flattened, the
+    // script's `File` line points at nothing and makensis fails.
+    CHECK(std::filesystem::exists(opt.out / "app" / "guide" / "start.md"));
+    CHECK(!std::filesystem::exists(opt.out / "app" / "start.md"));
     CHECK(report.complete());
 }
 
@@ -109,8 +114,8 @@ void a_promised_file_that_is_not_there_fails_the_stage() {
     t.file("core/build/bin", "libcore.dll", "x");
     t.file("app/build/bin", "app.exe", "x");
     t.file("app/build/bin", "app-cli.exe", "x");
-    // `docs/` and `vendor/fonts/` are declared in the toy family's manifest
-    // and deliberately absent.
+    // `docs/`, `vendor/fonts/` and `guide/start.md` are declared in the toy
+    // family's manifest and deliberately absent.
 
     const Registry reg = Registry::scan(t.path());
     StageOptions opt;
@@ -118,7 +123,7 @@ void a_promised_file_that_is_not_there_fails_the_stage() {
     const StageReport report = stage(reg, resolve(reg, "app", "windows-x64"), opt);
 
     CHECK(!report.complete());
-    CHECK(report.missing() == 2);
+    CHECK(report.missing() == 3);
     const StagedFile* docs = staged_for(report, "docs/");
     CHECK(docs != nullptr);
     CHECK(contains(docs->problem, "docs/"));
@@ -134,6 +139,7 @@ void a_dry_run_finds_everything_and_copies_nothing() {
     t.file("app/build/bin", "app.exe", "x");
     t.file("app/build/bin", "app-cli.exe", "x");
     t.file("app/docs", "readme.md", "x");
+    t.file("app/guide", "start.md", "x");
     t.file("app/vendor/fonts", "icons.woff2", "x");
 
     const Registry reg = Registry::scan(t.path());

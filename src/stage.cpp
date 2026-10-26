@@ -238,10 +238,12 @@ StageReport stage(const Registry& reg, const Plan& plan, const StageOptions& opt
             // exists to keep platforms apart on a release page and means
             // nothing once the file is on one machine.
             const fs::path destination_dir = opt.out / entry.name;
+            // A file declared inside a folder (`okf/index.md`) keeps the folder:
+            // the emitter reads it from there (2026-10-26).
             staged.destination =
                 destination_dir /
                 (staged.is_folder      ? fs::path(bare)
-                 : entry.role == Role::Root ? staged.source.filename()
+                 : entry.role == Role::Root ? fs::path(bare).parent_path() / staged.source.filename()
                                             : fs::path(installed_name(bare, plan.platform)));
 
             if (staged.is_folder) {

@@ -99,7 +99,17 @@ std::string section(const Plan& plan, const Options& opt) {
                 const std::string name = nsis_path(entry.role == Role::Root
                                                        ? exe_name(f, plan.platform)
                                                        : installed_name(f, plan.platform));
-                s += "  File \"" + src + "\\" + name + "\"\n";
+                // A FILE inside a folder (`okf/index.md`) installs into that
+                // folder: `File` writes to the current out-path, which is the
+                // install root, so the folder was read and then dropped.
+                const auto slash = name.rfind('\\');
+                if (slash != std::string::npos) {
+                    s += "  SetOutPath \"" + install_dir + "\\" + name.substr(0, slash) + "\"\n";
+                    s += "  File \"" + src + "\\" + name + "\"\n";
+                    s += "  SetOutPath \"" + install_dir + "\"\n";
+                } else {
+                    s += "  File \"" + src + "\\" + name + "\"\n";
+                }
             }
         }
     }

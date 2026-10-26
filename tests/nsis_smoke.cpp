@@ -59,6 +59,17 @@ void a_nested_folder_is_written_with_the_separator_nsis_reads() {
     CHECK(!contains(s, "vendor/fonts"));
 }
 
+// A file declared inside a folder installs INTO that folder. The script read
+// it from `guide\start.md` and wrote it to the install root, so Hormiga's
+// `okf/index.md` would have landed beside the executable (2026-10-26).
+void a_file_inside_a_folder_is_installed_into_it() {
+    TempDir t;
+    const std::string s = nsis::render(toy_plans(t));
+    const auto into = s.find("SetOutPath \"$INSTDIR\\app-2.0.0\\guide\"");
+    const auto file = s.find("File \"..\\dist\\app\\guide\\start.md\"");
+    CHECK(into != std::string::npos && file != std::string::npos && into < file);
+}
+
 // The general form of the same bug, asserted over the whole script rather
 // than over the one line that had it -- because the fix is a chokepoint, and a
 // chokepoint is only worth having if something notices when a path routes
@@ -157,6 +168,7 @@ int main() {
     windows_executables_get_their_extension();
     a_trailing_slash_means_a_recursive_folder();
     a_nested_folder_is_written_with_the_separator_nsis_reads();
+    a_file_inside_a_folder_is_installed_into_it();
     no_emitted_path_argument_contains_a_forward_slash();
     each_version_installs_into_its_own_folder();
     one_selectable_component_per_application();
