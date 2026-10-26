@@ -130,6 +130,7 @@ inline void write_toy(const TempDir& t) {
           {"name":"view","version":"*","link":"static"}],
         "provides":{"gui":"app","cli":"app-cli",
           "ships_beside_binary":["docs/","vendor/fonts/"]},
+        "identity":{"app_id":"org.example.app","publisher":"App"},
         "platforms":["windows-x64"])");
 }
 

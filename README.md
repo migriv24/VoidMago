@@ -116,6 +116,46 @@ Hormiga asks for Core `>=0.2.7`, but Void Maiz — which Hormiga also uses — a
 for `>=0.2.12`, so Hormiga's real floor is 0.2.12 and nothing in Hormiga's own
 repository says so.
 
+## Who uses Mago, and the commands for each
+
+No user of a Void application ever needs Mago: every application ships complete,
+and on a phone the store is the only updater. Mago is for the people who BUILD
+the applications. See [okf/concepts/audiences.md](okf/concepts/audiences.md).
+
+```
+mago report voidhormiga      a fork maintainer or contributor: the stack, and where to report
+mago upstream voidhormiga    a fork maintainer: upstream releases since this fork's base
+mago learn voidhormiga       a new contributor: what to read, and FaultSack's study site
+```
+
+A manifest may now state `identity` (`app_id`, `publisher`, `feed`,
+`belongs_to`), `fork_of` and `contribute` (`guide`, `security`, `issues`).
+`mago doctor` warns when a fork ships with upstream's identity, because a phone
+or an installer would take it as an update to the original.
+
+## `mago bootstrap` — the family onto a disk that has nothing
+
+A contributor to an application needs its libraries beside it, as siblings, at
+versions that work together. (The `v0.2.14` line is what it prints once Void
+Core tags its releases; on 2026-10-24 none of the libraries has a tag.)
+
+```
+$ mago bootstrap ./VoidHormiga
+clone    voidcore  v0.2.14  -> ../VoidCore
+         the newest release >=0.2.14 allows
+clone    voidmaiz  default branch  -> ../VoidMaiz
+         no release tags: the default branch, which no matrix has approved
+absent   voidhammer (optional)  default branch  -> ../VoidHammer
+         no repository is named, so it is left out; voidhormiga builds without it
+```
+
+Each `requires[]` entry may carry a `repository` (the edge has to, since the
+dependency's own manifest is inside the repository nobody has cloned yet) and
+`"optional": true`. The chosen release is the greatest tag inside the
+intersection of every requirer's range. Anything already on disk is read and
+judged, never replaced. `--dry-run` decides without cloning; `--full` clones
+dependencies with full history. See [okf/concepts/bootstrap.md](okf/concepts/bootstrap.md).
+
 ## `mago notify` — the part a verdict is not
 
 A verdict is not a release message, and we know that because one got written

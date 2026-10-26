@@ -376,12 +376,62 @@ void Registry::check_cycles(std::vector<Finding>& out) const {
     }
 }
 
+namespace {
+// A repository URL compared by what it names, not how it is spelled.
+std::string same_repo(std::string u) {
+    for (auto& c : u) c = (char)std::tolower((unsigned char)c);
+    while (!u.empty() && u.back() == '/') u.pop_back();
+    if (u.size() > 4 && u.compare(u.size() - 4, 4, ".git") == 0) u.resize(u.size() - 4);
+    return u;
+}
+}  // namespace
+
 std::vector<Finding> Registry::check(const Family* family) const {
     std::vector<Finding> out = load_errors_;
+
+    /* WHO AN APPLICATION IS (okf/concepts/audiences.md, 2026-10-25). A fork is
+     * welcome; a fork wearing upstream's identity is an impostor update to
+     * every phone and installer that has the original. */
+    for (const auto& [_, m] : projects_) {
+        const auto& id = m.identity;
+        const std::string repo = same_repo(m.repository);
+        if (!id.belongs_to.empty() && !repo.empty() && same_repo(id.belongs_to) != repo) {
+            out.push_back({"warn", m.name,
+                           "ships the identity of " + id.belongs_to +
+                               (id.app_id.empty() ? "" : " (" + id.app_id + ")") + " from " + m.repository +
+                               ": a fork takes its own app_id, publisher and feed, or it presents itself as "
+                               "an update to the original"});
+        }
+        if (!m.fork_of.empty() && !id.belongs_to.empty() && same_repo(m.fork_of) == same_repo(id.belongs_to)) {
+            out.push_back({"warn", m.name,
+                           "is a fork of " + m.fork_of + " but keeps that project's identity: give it its own"});
+        }
+        if (m.is_installable() && !m.platforms.empty() && id.app_id.empty()) {
+            out.push_back({"note", m.name,
+                           "ships to " + std::to_string(m.platforms.size()) +
+                               " platform(s) and states no identity.app_id: a store and an OS know an "
+                               "application by an id this manifest does not say"});
+        }
+        const std::pair<const char*, std::string> files[] = {{"guide", m.contribute.guide},
+                                                              {"security", m.contribute.security}};
+        for (const auto& [what, rel] : files) {
+            std::error_code ec;
+            if (!rel.empty() && !std::filesystem::exists(m.path / rel, ec)) {
+                out.push_back({"warn", m.name,
+                               std::string("contribute.") + what + " names " + rel + ", which is not in the repository"});
+            }
+        }
+    }
 
     for (const auto& [_, m] : projects_) {
         for (const auto& req : m.requirements) {
             const Manifest* dep = get(req.name);
+            if (!dep && req.optional) {
+                out.push_back({"note", m.name,
+                               "builds without the optional \"" + req.name +
+                                   "\": it has no manifest in this registry"});
+                continue;
+            }
             if (!dep) {
                 out.push_back({"error", m.name,
                                "requires \"" + req.name +

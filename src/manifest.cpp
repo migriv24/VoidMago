@@ -96,6 +96,8 @@ Requirement parse_requirement(const cJSON* d, const fs::path& source) {
     r.link = str_field(d, "link");
     r.via = str_field(d, "via");
     r.note = str_field(d, "note");
+    r.repository = str_field(d, "repository");
+    r.optional = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(d, "optional"));
 
     if (!r.link.empty() && !one_of(r.link, kLinks)) {
         throw ManifestError(source.string() + ": requires[" + r.name + "].link is \"" + r.link +
@@ -280,6 +282,18 @@ Manifest load(const fs::path& path_in) {
     m.description = str_field(doc.root, "description");
     m.status = str_field(doc.root, "status");
     m.platforms = str_array(doc.root, "platforms");
+    m.fork_of = str_field(doc.root, "fork_of");
+    if (const cJSON* id = cJSON_GetObjectItemCaseSensitive(doc.root, "identity"); cJSON_IsObject(id)) {
+        m.identity.app_id = str_field(id, "app_id");
+        m.identity.publisher = str_field(id, "publisher");
+        m.identity.feed = str_field(id, "feed");
+        m.identity.belongs_to = str_field(id, "belongs_to");
+    }
+    if (const cJSON* c = cJSON_GetObjectItemCaseSensitive(doc.root, "contribute"); cJSON_IsObject(c)) {
+        m.contribute.guide = str_field(c, "guide");
+        m.contribute.security = str_field(c, "security");
+        m.contribute.issues = str_field(c, "issues");
+    }
 
     const cJSON* reqs = cJSON_GetObjectItemCaseSensitive(doc.root, "requires");
     if (cJSON_IsArray(reqs)) {

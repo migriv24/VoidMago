@@ -5,3 +5,11 @@ stage/
 imgui.ini
 __pycache__/
 KEEP_HIDDEN.txt
+
+# Correspondence between Void projects, and reports from deployments: they can
+# quote a client, a database or unreleased work, and this repository is meant
+# to be public (so contributors can run `mago bootstrap`). The convention is
+# Void Hormiga's: okf/concepts/foundation/what-may-be-public.md there.
+MESSAGE_FOR_*.md
+REPORT_FROM_*.md
+.private-terms

@@ -162,6 +162,36 @@ void a_partner_with_no_manifest_is_reported_rather_than_skipped() {
     CHECK(has_finding(Registry::scan(t.path()).check(), "note", "cannot be computed"));
 }
 
+// okf/concepts/audiences.md: a fork is welcome, a fork wearing upstream's
+// identity is an impostor update to every phone that has the original.
+void a_fork_wearing_upstreams_identity_is_warned() {
+    TempDir t;
+    t.project("fork", R"("name":"app","display_name":"App","kind":"application","version":"1.0.0",
+        "repository":"https://example.org/someone/App","fork_of":"https://example.org/up/App",
+        "identity":{"app_id":"org.up.app","belongs_to":"https://example.org/up/App.git"},
+        "platforms":["windows-x64"])");
+    const auto f = Registry::scan(t.path()).check();
+    CHECK(has_finding(f, "warn", "presents itself as an update to the original"));
+    CHECK(has_finding(f, "warn", "keeps that project's identity"));
+
+    TempDir own;
+    own.project("fork", R"("name":"app","display_name":"App","kind":"application","version":"1.0.0",
+        "repository":"https://example.org/someone/App","fork_of":"https://example.org/up/App",
+        "identity":{"app_id":"org.someone.app","belongs_to":"https://example.org/someone/App/"},
+        "platforms":["windows-x64"])");
+    CHECK(Registry::scan(own.path()).check().empty());
+}
+
+void a_contribute_file_that_is_not_there_is_warned() {
+    TempDir t;
+    t.project("a", R"("name":"a","display_name":"A","kind":"runtime","version":"1.0.0",
+        "contribute":{"guide":"CONTRIBUTING.md","security":"SECURITY.md"})");
+    t.file("a", "CONTRIBUTING.md", "how");
+    const auto f = Registry::scan(t.path()).check();
+    CHECK(has_finding(f, "warn", "contribute.security names SECURITY.md"));
+    CHECK(!has_finding(f, "warn", "contribute.guide"));
+}
+
 void a_healthy_family_reports_nothing() {
     TempDir t;
     mago::test::write_toy(t);
@@ -187,6 +217,8 @@ int main() {
     a_release_block_that_describes_another_version_is_an_error();
     a_release_that_moved_backwards_is_an_error();
     a_partner_with_no_manifest_is_reported_rather_than_skipped();
+    a_fork_wearing_upstreams_identity_is_warned();
+    a_contribute_file_that_is_not_there_is_warned();
     a_healthy_family_reports_nothing();
     mago::test::pass("doctor");
     return 0;

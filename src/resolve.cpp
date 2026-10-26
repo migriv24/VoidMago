@@ -198,6 +198,7 @@ Plan resolve(const Registry& reg, const std::string& app_name, const std::string
                            std::vector<std::string> trail) -> void {
         for (const auto& req : m.requirements) {
             const Manifest* dep = reg.get(req.name);
+            if (!dep && req.optional) continue;  // the consumer builds without it
             if (!dep) {
                 throw ResolveError(m.name + " requires " + req.name +
                                    ", which has no manifest. Add a void.json to it, or Mago "

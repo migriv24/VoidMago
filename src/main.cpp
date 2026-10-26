@@ -28,6 +28,7 @@
 #include "mago/resolve.hpp"
 #include "mago/stage.hpp"
 #include "mago/vendors.hpp"
+#include "mago/bootstrap.hpp"
 
 namespace fs = std::filesystem;
 using namespace mago;
@@ -54,6 +55,11 @@ usage: mago [--root DIR] <command> [options]
   roots                   the folders this machine knows
   forget <folder>         stop scanning one
   wizard [applications]   emit the installer from the resolved plans
+  report <project>        the stack as built here, and where to report it
+  upstream <project>      how many releases a fork is behind upstream
+  learn <project>         the reading order, and FaultSack's study site for it
+  bootstrap <repo|path>   clone a project and everything it requires, as siblings,
+                          at releases every requirer accepts
 
 options
   --root DIR              folder holding the Void checkouts
@@ -89,6 +95,10 @@ options
   --outfile NAME          installer filename                    (wizard)
   --license-file PATH     shown on the licence page             (wizard)
   --source-root PATH      where the built artifacts sit         (wizard)
+  --into DIR              where the siblings go             (bootstrap)
+                          default: the folder holding the target
+  --dry-run               decide every version, clone nothing (bootstrap)
+  --full                  full history for dependencies too   (bootstrap)
 )";
 
 // A hand-rolled parser, because argparse is not in the standard library and a
@@ -118,7 +128,7 @@ const std::vector<std::string> kValueOptions = {
     "--output",     "-o",         "--suite-name",   "--publisher",   "--outfile",
     "--license-file", "--source-root", "--topic",   "--date",
     "--note",       "--seam",     "--shares",       "--status",      "--family",
-    "--label",      "--base-url", "--artifacts"};
+    "--label",      "--base-url", "--artifacts", "--into"};
 
 Args parse_args(int argc, char** argv) {
     Args args;
@@ -1189,6 +1199,213 @@ int cmd_wizard(const Registry& reg, const Args& args) {
     return 0;
 }
 
+// ── report: what a fork maintainer or a contributor pastes into an issue ─────
+//
+// okf/concepts/audiences.md. An application's own report (`voidhormiga-cli
+// report`) knows one binary. A developer's problem is usually a COMBINATION: this
+// fork, on that Void Core, with this Maiz. So this prints the whole stack as the
+// registry sees it on this machine -- names and versions only, never a path or a
+// user -- and the tracker to take it to, upstream's as well when it is a fork.
+const char* host_platform() {
+#if defined(_WIN32)
+    return "windows-x64";
+#elif defined(__APPLE__) && defined(__aarch64__)
+    return "macos-arm64";
+#elif defined(__APPLE__)
+    return "macos-x64";
+#elif defined(__linux__)
+    return "linux-x64";
+#else
+    return "unknown";
+#endif
+}
+
+std::string tracker_of(const Manifest& m) {
+    if (!m.contribute.issues.empty()) return m.contribute.issues;
+    if (m.repository.empty()) return "";
+    std::string r = m.repository;
+    while (!r.empty() && r.back() == '/') r.pop_back();
+    if (r.size() > 4 && r.compare(r.size() - 4, 4, ".git") == 0) r.resize(r.size() - 4);
+    return r + "/issues/new/choose";
+}
+
+int cmd_report(const Registry& reg, const Args& args) {
+    if (args.positional.empty()) throw UsageError("report needs a project name");
+    const Manifest* m = reg.get(args.positional[0]);
+    if (!m) throw UsageError("no project named \"" + args.positional[0] + "\" in this registry");
+    std::cout << "Stack, as built on this machine:\n\n";
+    std::cout << "- " << m->display_name << " " << m->version.str()
+              << (m->fork_of.empty() ? "" : "  (a fork of " + m->fork_of + ")") << "\n";
+    for (const auto& req : m->requirements) {
+        const Manifest* d = reg.get(req.name);
+        std::cout << "- " << (d ? d->display_name : req.name) << " "
+                  << (d ? d->version.str() : std::string(req.optional ? "absent (optional)" : "ABSENT"))
+                  << "  (requires " << req.version.text() << ")\n";
+    }
+    std::cout << "- Platform: " << host_platform() << "\n\n";
+    const std::string here = tracker_of(*m);
+    if (!here.empty()) std::cout << "Report it here: " << here << "\n";
+    if (!m->fork_of.empty()) {
+        Manifest up;
+        up.repository = m->fork_of;
+        std::cout << "If it happens on upstream too, report it there as well: " << tracker_of(up) << "\n"
+                  << "  (with steps that do not need your fork's changes)\n";
+    }
+    std::cout << "\nKeep out of any report: real people's names, emails, phone numbers and\n"
+                 "addresses, an organization's database or logs, keys, and paths on your computer.\n";
+    return 0;
+}
+
+// ── learn: the family contributor's first afternoon ─────────────────────────
+//
+// okf/concepts/audiences.md, person 3. Somebody about to change a Void project
+// needs its vocabulary and its design before its code. FaultSack (a sibling
+// application, never a dependency) turns a project's OKF and code into a study
+// site and a book; this runs it when it is installed and says how to get it when
+// it is not, then gives the reading order: the project, then each library it
+// stands on, in the order it depends on them.
+int cmd_learn(const Registry& reg, const Args& args) {
+    if (args.positional.empty()) throw UsageError("learn needs a project name");
+    const Manifest* m = reg.get(args.positional[0]);
+    if (!m) throw UsageError("no project named \"" + args.positional[0] + "\" in this registry");
+
+    std::cout << "Learning " << m->display_name << "\n\n1. Read, in this order:\n";
+    std::error_code ec;
+    const auto line = [&](const Manifest& p, const std::string& rel) {
+        if (fs::exists(p.path / rel, ec)) std::cout << "     " << (p.path / rel).string() << "\n";
+    };
+    if (!m->contribute.guide.empty()) line(*m, m->contribute.guide);
+    line(*m, "okf/index.md");
+    for (const auto& req : m->requirements)
+        if (const Manifest* d = reg.get(req.name)) line(*d, "okf/index.md");
+
+    const fs::path out = args.opt("--into").empty() ? fs::temp_directory_path() / ("mago-learn-" + m->name)
+                                                    : fs::path(args.opt("--into"));
+    std::string text;
+    const bool have = run_program({"faultsack", "--help"}, text) == 0;
+    std::cout << "\n2. Study it with FaultSack";
+    if (!have) {
+        std::cout << " (not installed here). FaultSack turns a project's OKF and code into\n"
+                     "   flashcards, quizzes, a module map and a printable book.\n";
+        if (const Manifest* fs_ = reg.get("faultsack")) {
+            std::cout << "   There is a checkout at " << fs_->path.string() << ": follow its README's Setup,\n"
+                      << "   then run `mago learn " << m->name << "` again.\n";
+        } else {
+            // its manifest names a repository that does not exist yet (2026-10-25): say so
+            std::cout << "   It has no public release yet; ask a maintainer for it. Until then, read.\n";
+        }
+        return 0;
+    }
+    std::cout << ": building the study site in " << out.string() << " ...\n";
+    text.clear();
+    if (run_program({"faultsack", "analyze", m->path.string(), "--out", out.string(), "--name", m->display_name},
+                    text) != 0) {
+        std::cout << "   FaultSack could not analyse it:\n" << text;
+        return 1;
+    }
+    std::cout << "   done. Open it with:  faultsack serve --out " << out.string() << "\n"
+              << "   and the book with:   faultsack book " << m->path.string() << " --with-mago\n";
+    return 0;
+}
+
+// ── upstream: how far a fork's base is from upstream's releases ─────────────
+//
+// okf/concepts/audiences.md, person 2. Read from upstream's tags, so it works
+// without cloning upstream at all.
+int cmd_upstream(const Registry& reg, const Args& args) {
+    if (args.positional.empty()) throw UsageError("upstream needs a project name");
+    const Manifest* m = reg.get(args.positional[0]);
+    if (!m) throw UsageError("no project named \"" + args.positional[0] + "\" in this registry");
+    const std::string up = !m->fork_of.empty() ? m->fork_of : m->repository;
+    if (up.empty()) throw UsageError(m->name + " names neither fork_of nor repository");
+    auto git = system_git();
+    std::string err;
+    const auto tags = git->tags(up, err);
+    if (!err.empty()) throw UsageError("could not read " + up + ": " + err);
+    std::vector<Version> newer;
+    std::optional<Version> newest;
+    for (const auto& t : tags) {
+        const auto v = tag_version(t);
+        if (!v) continue;
+        if (!newest || *v > *newest) newest = v;
+        if (*v > m->version) newer.push_back(*v);
+    }
+    std::sort(newer.begin(), newer.end());
+    std::cout << m->display_name << " here: " << m->version.str()
+              << (m->fork_of.empty() ? "" : "  (a fork of " + m->fork_of + ")") << "\n"
+              << "upstream's newest release: " << (newest ? newest->str() : std::string("none tagged")) << "\n";
+    if (newer.empty()) {
+        std::cout << "nothing newer upstream.\n";
+        return 0;
+    }
+    std::cout << newer.size() << " release(s) newer than this one:";
+    for (const auto& v : newer) std::cout << " " << v.str() << (breaks_compat(m->version, v) ? " (breaking)" : "");
+    std::string base = up;
+    while (!base.empty() && base.back() == '/') base.pop_back();
+    if (base.size() > 4 && base.compare(base.size() - 4, 4, ".git") == 0) base.resize(base.size() - 4);
+    std::cout << "\nread each one's behavior changes before merging: " << base << "/releases\n";
+    return 0;
+}
+
+// ── bootstrap: a project and its family onto a disk that has nothing ────────
+//
+// The argument is a repository URL or a checkout already on disk. A URL is
+// cloned first, with full history, because the target is the one a contributor
+// works in; everything it requires lands beside it at the sibling paths its
+// manifest names. See include/mago/bootstrap.hpp for the version rule.
+int cmd_bootstrap(const Args& args) {
+    if (args.positional.empty())
+        throw UsageError("bootstrap needs a repository URL or a checkout path");
+    const std::string what = args.positional[0];
+    const bool is_url = what.find("://") != std::string::npos || what.rfind("git@", 0) == 0;
+    auto git = system_git();
+    std::error_code ec;
+    fs::path target;
+    if (is_url) {
+        std::string base = what;
+        while (!base.empty() && base.back() == '/') base.pop_back();
+        base = base.substr(base.find_last_of("/:") + 1);
+        if (base.size() > 4 && base.compare(base.size() - 4, 4, ".git") == 0) base.resize(base.size() - 4);
+        const fs::path into = args.opt("--into").empty() ? fs::current_path() : fs::path(args.opt("--into"));
+        target = into / base;
+        if (!fs::exists(target, ec)) {
+            if (args.has("--dry-run")) {
+                std::cout << "mago: would clone " << what << " into " << target.string()
+                          << "; its requirements are read once it is there\n";
+                return 0;
+            }
+            fs::create_directories(into, ec);
+            std::string err;
+            if (!git->clone(what, "", target, /*shallow=*/false, err))
+                throw UsageError("could not clone " + what + ": " + err);
+            std::cout << "cloned   " << what << " -> " << target.string() << "\n";
+        }
+    } else {
+        target = fs::absolute(fs::path(what), ec);
+    }
+    if (!args.opt("--into").empty() && !is_url)
+        throw UsageError("--into applies to a URL; a checkout's siblings go beside it");
+
+    BootstrapOptions opt;
+    opt.dry_run = args.has("--dry-run");
+    opt.shallow_deps = !args.has("--full");
+    const BootstrapResult r = bootstrap(target, *git, opt);
+
+    static const char* kWord[] = {"clone", "present", "absent", "FAILED"};
+    for (const auto& s : r.steps) {
+        const char* word = kWord[static_cast<int>(s.action)];
+        std::cout << word << std::string(9 - std::string(word).size(), ' ') << s.name
+                  << (s.optional ? " (optional)" : "") << "  " << (s.ref.empty() ? "default branch" : s.ref)
+                  << "  -> " << s.dir.string() << "\n";
+        for (const auto& n : s.notes) std::cout << "         " << n << "\n";
+    }
+    if (r.steps.empty()) std::cout << "nothing to lay out: it requires no Void project\n";
+    std::cout << (r.ok ? "\nthe family is laid out. Build each dependency the way its README says, then "
+                         "this project.\n"
+                       : "\nnot everything could be laid out; see FAILED and the notes above.\n");
+    return r.ok ? 0 : 1;
+}
+
 // The single exit through which every command's code passes.
 int done(int code) { return code != 0 ? code : (g_unread_manifests > 0 ? 1 : 0); }
 
@@ -1227,6 +1444,10 @@ int main(int argc, char** argv) {
         if (args.command == "stage") return done(cmd_stage(load_registry(args, argv[0]), args));
         if (args.command == "feed") return done(cmd_feed(load_registry(args, argv[0]), args));
         if (args.command == "wizard") return done(cmd_wizard(load_registry(args, argv[0]), args));
+        if (args.command == "bootstrap") return cmd_bootstrap(args);
+        if (args.command == "report") return cmd_report(load_registry(args, argv[0]), args);
+        if (args.command == "learn") return cmd_learn(load_registry(args, argv[0]), args);
+        if (args.command == "upstream") return cmd_upstream(load_registry(args, argv[0]), args);
 
         std::cerr << "mago: unknown command \"" << args.command << "\"\n\n" << kUsage;
         return 2;

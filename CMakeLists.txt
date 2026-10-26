@@ -53,6 +53,7 @@ add_library(voidmago STATIC
   src/blast.cpp
   src/notify.cpp
   src/emit_nsis.cpp
+  src/bootstrap.cpp
   vendor/cJSON.c
 )
 target_include_directories(voidmago PUBLIC include PRIVATE vendor)
@@ -100,7 +101,7 @@ endif()
 if(VOIDMAGO_BUILD_TESTS)
   enable_testing()
 
-  foreach(t semver resolve blast doctor notify matrix vendors ship nsis family)
+  foreach(t semver resolve blast doctor notify matrix vendors ship nsis family bootstrap)
     add_executable(mago_${t}_smoke tests/${t}_smoke.cpp)
     target_link_libraries(mago_${t}_smoke PRIVATE voidmago)
     target_include_directories(mago_${t}_smoke PRIVATE tests)

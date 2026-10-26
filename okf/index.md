@@ -189,10 +189,14 @@ table down early even while it is short.
 Three of these have been researched into
 [concepts/distribution.md](concepts/distribution.md); three remain open.
 
-1. **The sibling-layout question.** *Open.* Submodules pinned to tags, a
-   documented layout with a bootstrap script, or a meta-repo. `mago` resolves
-   against whatever is on disk today, which works for one developer and does
-   not survive a second one.
+1. **The sibling-layout question.** *Answered for its first case,
+   2026-10-24:* [`mago bootstrap`](concepts/bootstrap.md) clones a project and
+   everything it requires as siblings, at the newest release every requirer
+   accepts, and never touches what is already on disk. What is left open is
+   the family's half: the libraries carry no release tags yet, so bootstrap has
+   only default branches to choose from. `mago` itself resolves against
+   whatever is on disk, which works for one developer and did not survive a
+   second one.
 2. **Version semantics.** *Settled.* Below 1.0 the minor position is the break —
    Void Core already says so in its own manifest, and `mago` infers
    `compatible` / `breaking` on that rule, with `--change` to override it when

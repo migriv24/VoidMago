@@ -36,6 +36,17 @@ struct Requirement {
     std::string via;        // reached through another project's headers
     std::string note;
 
+    // Where the dependency's repository lives, so `mago bootstrap` can clone
+    // it onto a disk that has nothing yet. A dependency's own manifest also
+    // says this, but that manifest is inside the repository you have not
+    // cloned: the edge has to carry the address.
+    std::string repository;
+
+    // The consumer builds without it (Void Hormiga without Void Hammer builds
+    // with networking absent). A missing optional dependency is reported, never
+    // an error, by `plan`, `doctor` and `bootstrap`.
+    bool optional = false;
+
     // Does this dependency become a FILE ON DISK next to the binary?
     //
     // Only shared links do. A statically linked dependency is already inside
@@ -192,6 +203,25 @@ struct Manifest {
     std::vector<std::string> ships_beside_binary;  // folders/files next to the exe
 
     std::vector<std::string> platforms;
+
+    // WHO THIS APPLICATION IS to an operating system and a store (2026-10-25,
+    // okf/concepts/audiences.md). `belongs_to` names the repository whose
+    // identity this is. A fork that keeps upstream's app id, publisher or feed
+    // presents itself to every phone and installer as an update to the
+    // original, which a store rejects and a sideloaded phone may accept.
+    struct Identity {
+        std::string app_id;      // reverse-DNS: org.voidhormiga.app
+        std::string publisher;   // the name an installer and a store listing show
+        std::string feed;        // where its desktop update feed lives
+        std::string belongs_to;  // the repository this identity is
+    } identity;
+    // The repository a fork follows (absent on upstream itself).
+    std::string fork_of;
+    // Where people reach the project (okf/concepts/audiences.md): a guide, a
+    // security policy, and the tracker's address.
+    struct Contribute {
+        std::string guide, security, issues;
+    } contribute;
 
     // From `provides.effects`, `provides.contracts` and `provides.documents`.
     std::vector<std::string> effects;
