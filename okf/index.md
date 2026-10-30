@@ -257,7 +257,7 @@ correspondence, so they are not in this repository.
 
 | asked by | ask | answer |
 |---|---|---|
-| Void Hormiga, 2026-09-08; a field report, 2026-09-05 | NSIS paths carried a forward slash, so `vendor/fonts` installed as `vendorfonts` | **Fixed** (8e52ca7 and before): every path written into a script is normalized once |
+| Void Hormiga, 2026-09-08; a field report, 2026-09-05 | NSIS paths carried a forward slash, so `vendor/fonts` installed as `vendorfonts` | **Fixed** in 0.1.8: every path written into a script is normalized once |
 | Void Core, 2026-09-03 | a release broadcast should be computed, not written by hand | **Built**: `mago notify`, the `release` block, [broadcast.md](concepts/broadcast.md) |
 | Void Maiz, 2026-09-08 | loose wires in the family graph | **Fixed in Maiz**; their correction (the tangents were dead code) stands |
 | Void Maiz, 2026-09-21 | `scan` ran a long name into its version column | **Fixed**: the name column is as wide as the widest name |
