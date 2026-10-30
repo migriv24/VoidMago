@@ -144,7 +144,8 @@ void the_per_project_section_is_left_empty_and_labelled() {
     TempDir t;
     write_family_with_a_release(t);
     const Registry reg = Registry::scan(t.path());
-    const Message* m = message_to(compose(reg, gather(reg, "core")), "view");
+    const auto msgs = compose(reg, gather(reg, "core"));  // m points into it
+    const Message* m = message_to(msgs, "view");
     CHECK(m != nullptr);
     CHECK(contains(m->body, "What this means for View specifically"));
     CHECK(contains(m->body, "_Not yet written._"));
@@ -174,7 +175,8 @@ void where_to_read_the_rest_is_relative_to_the_recipient() {
     TempDir t;
     write_family_with_a_release(t);
     const Registry reg = Registry::scan(t.path());
-    const Message* m = message_to(compose(reg, gather(reg, "core")), "app");
+    const auto msgs = compose(reg, gather(reg, "core"));  // m points into it
+    const Message* m = message_to(msgs, "app");
     CHECK(m != nullptr);
     CHECK(contains(m->body, "../core/SPEC.md"));
     CHECK(contains(m->body, "../core/okf/concepts/quantity.md"));
@@ -192,7 +194,8 @@ void untouched_projects_are_not_written_to_unless_asked() {
 
     NotifyOptions all;
     all.include_untouched = true;
-    const Message* m = message_to(compose(reg, b, all), "elsewhere");
+    const auto msgs = compose(reg, b, all);  // m points into it
+    const Message* m = message_to(msgs, "elsewhere");
     CHECK(m != nullptr);
     CHECK(m->verdict == Verdict::Untouched);
     CHECK(contains(m->body, "nothing to do"));

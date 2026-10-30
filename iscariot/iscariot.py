@@ -661,7 +661,10 @@ def cmd_notify(args):
               + (f' ({len(held)} in history, for the author)' if held else ''))
         return 0
     date = args.date or datetime.date.today().isoformat()
-    me = os.path.relpath(os.path.abspath(__file__), folder).replace('\\', '/')
+    try:
+        me = os.path.relpath(os.path.abspath(__file__), folder).replace('\\', '/')
+    except ValueError:  # another drive, on Windows: no relative path exists
+        me = os.path.abspath(__file__).replace('\\', '/')
     lines = [f'# From Iscariot (Void Mago) to {pid}: {len(rows)} open flag(s)', '',
              f'**Date:** {date} · **From:** Void Mago\'s Iscariot · **Ask:** resolve each flag below, '
              'then answer it with one of the two commands at the end.', '',

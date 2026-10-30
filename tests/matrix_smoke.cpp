@@ -135,7 +135,8 @@ void an_authored_seam_settles_a_disputed_one() {
     p.b = "b";
     p.seam = "state document";
     f.set_pairing(p);
-    const Cell settled = Matrix::build(reg, f).find("a", "b");
+    const Matrix matrix = Matrix::build(reg, f);  // a Cell points into its Matrix
+    const Cell settled = matrix.find("a", "b");
     CHECK(!settled.pairing->disputed);
     CHECK(settled.pairing->seam == "state document");
     CHECK(contains(settled.pairing->why, "settles the name"));

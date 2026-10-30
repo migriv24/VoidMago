@@ -243,22 +243,23 @@ void the_stable_copy_is_checked_against_the_versioned_one() {
     t.file("dist", "VoidHormiga-0.1.0-windows-x64-setup.exe", "the installer");
 
     // Nobody made the second copy.
-    const FeedArtifact& absent = build_feed(reg, {"app"}, opt).front()
-                                     .releases.front().artifacts.front();
+    // Each feed is named: a reference into a temporary dangles at the semicolon.
+    const auto first = build_feed(reg, {"app"}, opt);
+    const FeedArtifact& absent = first.front().releases.front().artifacts.front();
     CHECK(!absent.sha256.empty());
     CHECK(!absent.stable_present);
 
     // A copy left over from the previous release: present, plausible, wrong.
     t.file("dist", "VoidHormiga-windows-x64-setup.exe", "the PREVIOUS installer");
-    const FeedArtifact& stale = build_feed(reg, {"app"}, opt).front()
-                                    .releases.front().artifacts.front();
+    const auto second = build_feed(reg, {"app"}, opt);
+    const FeedArtifact& stale = second.front().releases.front().artifacts.front();
     CHECK(stale.stable_present);
     CHECK(stale.stable_sha256 != stale.sha256);
 
     // The same bytes, attached twice, which is the whole design.
     t.file("dist", "VoidHormiga-windows-x64-setup.exe", "the installer");
-    const FeedArtifact& good = build_feed(reg, {"app"}, opt).front()
-                                   .releases.front().artifacts.front();
+    const auto third = build_feed(reg, {"app"}, opt);
+    const FeedArtifact& good = third.front().releases.front().artifacts.front();
     CHECK(good.stable_present);
     CHECK(good.stable_sha256 == good.sha256);
 }
