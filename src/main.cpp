@@ -62,6 +62,7 @@ usage: mago [--root DIR] <command> [options]
                           at releases every requirer accepts
 
 options
+  --version               this binary's version, so a stale one is noticed
   --root DIR              folder holding the Void checkouts
                           (default: the registered roots, else the parent of
                           this executable's repo)
@@ -276,6 +277,10 @@ int cmd_scan(const Registry& reg, const Args& args) {
     }
 
     std::cout << reg.projects().size() << " Void projects with a manifest\n\n";
+    std::size_t name_width = 18;  // the widest name, so none runs into its version
+    for (const auto& [_, m] : reg.projects()) {
+        name_width = std::max(name_width, m.display_name.size() + 2);
+    }
     for (const char* kind : {"application", "capability", "runtime"}) {
         std::vector<const Manifest*> members;
         for (const auto& [_, m] : reg.projects()) {
@@ -286,7 +291,7 @@ int cmd_scan(const Registry& reg, const Args& args) {
         for (const Manifest* m : members) {
             std::vector<std::string> deps;
             for (const auto& r : m->requirements) deps.push_back(r.name);
-            std::cout << "    " << pad(m->display_name, 18) << pad(m->version.str(), 9)
+            std::cout << "    " << pad(m->display_name, name_width) << pad(m->version.str(), 9)
                       << " requires " << (deps.empty() ? "-" : join(deps)) << "\n";
         }
         std::cout << "\n";
@@ -1414,6 +1419,12 @@ int done(int code) { return code != 0 ? code : (g_unread_manifests > 0 ? 1 : 0);
 int main(int argc, char** argv) {
     try {
         const Args args = parse_args(argc, argv);
+        // An old binary has to be able to say so: Void Hormiga staged a
+        // release with a stale mago that nothing identified (2026-10-18).
+        if (args.command == "version" || args.has("--version")) {
+            std::cout << "mago " << MAGO_VERSION_STR << "\n";
+            return 0;
+        }
         if (args.command.empty() || args.has("--help")) {
             std::cout << kUsage;
             return args.command.empty() && !args.has("--help") ? 2 : 0;
