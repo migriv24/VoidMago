@@ -651,8 +651,14 @@ def cmd_notify(args):
     con = db()
     rows = con.execute('select * from flags where project=? and status in (?,?) order by tier, path, line',
                        (pid, 'open', 'claimed')).fetchall()
+    # What is already in history, or in commit identities, only a rewrite and
+    # a force-push remove. That is the author's decision, not the agent's.
+    held = [r for r in rows if r['location'] in ('history', 'authors')]
+    if not args.all:
+        rows = [r for r in rows if r['location'] not in ('history', 'authors')]
     if not rows:
-        print(f'{pid}: no open flags, nothing to send')
+        print(f'{pid}: no open flags an agent can resolve, nothing to send'
+              + (f' ({len(held)} in history, for the author)' if held else ''))
         return 0
     date = args.date or datetime.date.today().isoformat()
     me = os.path.relpath(os.path.abspath(__file__), folder).replace('\\', '/')
@@ -665,6 +671,10 @@ def cmd_notify(args):
              'Iscariot repaired nothing in your code. A hard-coded credential, or a private name inside '
              'logic, is yours to fix, because you know what depends on it. A credential that was ever '
              'committed must also be revoked: removing it from the tree leaves it in history.', '']
+    if held and not args.all:
+        lines += [f'{len(held)} more flag(s) are in this repository\'s history or commit identities. Only a '
+                  'history rewrite removes those, which is the author\'s decision, so they are not listed '
+                  'here and are not yours to answer.', '']
     for tier in sorted({r['tier'] for r in rows}):
         lines += [f'## Tier {tier}: {TIER_NAMES[tier]}', '', '| flag | where | rule | why |', '|---|---|---|---|']
         for r in rows:
@@ -731,6 +741,7 @@ def main(argv=None):
     s = sub.add_parser('notify', help='write the open flags into a project as a message')
     s.add_argument('project')
     s.add_argument('--write', action='store_true', help='write it into the project root (default: print)')
+    s.add_argument('--all', action='store_true', help='include flags in history, which only the author can resolve')
     s.add_argument('--date')
     s.set_defaults(func=cmd_notify)
 
