@@ -233,9 +233,13 @@ it on its first run; the NSIS emitter; and — since Void Core
 shipped 0.2.14 by hand and then wrote down what that cost — the broadcast:
 `mago notify`, the `release` block that carries the one fact a resolver cannot
 derive, and doctor's two checks for the two things doing it by hand got wrong.
-See [concepts/broadcast.md](concepts/broadcast.md).
+See [concepts/broadcast.md](concepts/broadcast.md). And, since 2026-10-30,
+[Iscariot](concepts/iscariot.md): the check that no Void repository publishes a
+credential, an agent's correspondence, a private name or personal data, with a
+local database of flags each project's agent answers.
 
-**Next, in order:** a manifest in the seven Void projects that still lack one —
+**Next, in order:** a manifest in the four Void projects that still lack one
+(Void Buzz, Void Hammer, Void Reyna, Void Unity) —
 the registry is only as true as its coverage, and Void Reyna in particular is
 already named as a seam partner by a project that can see it. Then the signing
 identity, because its value is reputation accumulated over time and the clock
@@ -245,3 +249,22 @@ the live-install swap.
 **Still not now:** the build farm, the update client, the desktop GUI. Mago has
 one real consumer; a tool built for one is that one's build script wearing a
 project's clothes — the mistake Allomone took two extractions to correct.
+
+# 10. What the family has asked of Mago, and the answers
+
+Folded in from the family's letters on 2026-10-30. The letters themselves are
+correspondence, so they are not in this repository.
+
+| asked by | ask | answer |
+|---|---|---|
+| Void Hormiga, 2026-09-08; a field report, 2026-09-05 | NSIS paths carried a forward slash, so `vendor/fonts` installed as `vendorfonts` | **Fixed** (8e52ca7 and before): every path written into a script is normalized once |
+| Void Core, 2026-09-03 | a release broadcast should be computed, not written by hand | **Built**: `mago notify`, the `release` block, [broadcast.md](concepts/broadcast.md) |
+| Void Maiz, 2026-09-08 | loose wires in the family graph | **Fixed in Maiz**; their correction (the tangents were dead code) stands |
+| Void Maiz, 2026-09-21 | `scan` ran a long name into its version column | **Fixed**: the name column is as wide as the widest name |
+| Void Maiz, 2026-09-21 | let a manifest declare its artifact names (`.zip`, `.apk`), so `feed --artifacts` hashes them | **Accepted, not built.** Shape: `release.artifacts: {platform: "Name-{version}-….zip"}` |
+| Void Hormiga, 2026-10-18 | a stale `mago` should announce itself | **`mago --version`**, built. Printing it in `stage`'s first line and the receipt is next; refusing a stage over a newer receipt is declined until the first is not enough |
+| Void Hormiga, 2026-10-18 | doctor should notice a sibling folder other projects build from that has no manifest | **Accepted, not built.** Void Hammer, the case that went unseen, is now a repository; its manifest is Hammer's to write |
+| Void Hormiga, 2026-10-18 | an application whose old installs cannot sync with new ones needs a word for it | **Accepted in principle**: `release.peers.syncs_with`, rendered as one sentence before the behavior changes. Not built |
+| Void Jelly, 2026-10-05 | Mago's 2026-10-04 letter asked for `"kind": "library"`, which the schema refuses | **The letter was wrong.** The schema stands; a library is a `runtime`, with a `kind_note` |
+| Void Jelly, 2026-10-05 | resolve a seam's name against the defining side's `provides.documents` | **Open.** Worth doing when a second seam disagreement appears; the Core ⇄ Palabra one is resolved |
+| Void Squid, 2026-10-09 | (findings only) Latin-OS's manifest does not parse; the `interacts_with` + `requires` note will recur | Latin-OS's `link: "c-abi"` names a seam where a link kind belongs; it is Latin-OS's to change. Doctor saying which side drops its entry is open |

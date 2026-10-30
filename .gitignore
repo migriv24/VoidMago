@@ -5,6 +5,7 @@ stage/
 imgui.ini
 __pycache__/
 KEEP_HIDDEN.txt
+git_secret.txt
 
 # Correspondence between Void projects, and reports from deployments: they can
 # quote a client, a database or unreleased work, and this repository is meant
@@ -13,3 +14,9 @@ KEEP_HIDDEN.txt
 MESSAGE_FOR_*.md
 REPORT_FROM_*.md
 .private-terms
+
+# Never published (Void Mago's Iscariot): secrets, correspondence between
+# agents, and the private-terms list.
+.env
+*.pem
+.claude/settings.local.json

@@ -599,6 +599,29 @@ Two properties matter more than the exact field names:
   compatibility matrix from inventing edges — and what makes `retest` a
   distinct verdict from `rebuild`.
 
+## Iscariot — nothing a client trusted us with is published
+
+Every Void repository is public, and most ship their `okf/` inside every
+installer. `iscariot/` is the family's publication check: it scans every Void
+project for credentials, agents' correspondence, private names and personal
+data, ranks what it finds by tier, and keeps the flags in a local database that
+each project's agent answers.
+
+```
+python iscariot/iscariot.py scan                       every Void project
+python iscariot/iscariot.py scan voidsquid --history   before a first push
+python iscariot/iscariot.py flags voidsquid            what is open
+python iscariot/iscariot.py fixed 412 --note "..."     verified by the next scan
+python iscariot/iscariot.py override 413 --note "..."  the flag was wrong
+python iscariot/iscariot.py ignore --apply             the family's .gitignore lines
+python iscariot/iscariot.py notify voidsquid --write   the open flags, as a message
+```
+
+Python, standard library only. The private-terms list and the flag database
+live in `~/.mago/` and never in a repository, because the list is itself the
+secret. Iscariot never prints what it matched. See
+[okf/concepts/iscariot.md](okf/concepts/iscariot.md).
+
 ## Two front-ends, and the order matters
 
 - **`mago` (CLI) — the real one.** Dependency-free, by hard constraint.
@@ -633,18 +656,23 @@ checkouts, and defaults to this repo's parent:
 build/bin/mago --root .. scan
 ```
 
-The test suite is ten smoke executables, as everywhere else in the family.
-Nine build a miniature family in a temp directory, so a version bump in Void
-Core cannot turn them red; `family_smoke` deliberately reads the real checkouts
-and asserts shape rather than versions, skipping itself in a bare clone. The
-desktop build adds a ninth, `desktop_check`, which is the GUI with the window
-taken off.
+The test suite is eleven smoke executables, as everywhere else in the family,
+plus `iscariot_smoke` when a Python 3 is found. Ten build a miniature family in
+a temp directory, so a version bump in Void Core cannot turn them red;
+`family_smoke` deliberately reads the real checkouts and asserts shape rather
+than versions, skipping itself in a bare clone. The desktop build adds
+`desktop_check`, which is the GUI with the window taken off.
+
+## Contributing
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md). `mago bootstrap` puts a project
+and the libraries it requires beside each other on an empty disk.
 
 ## Status
 
-`0.1.3`. The registry, the resolver, the blast radius, the broadcast, the
-interaction matrix, the desktop host and the NSIS emitter work against the real
-repositories — `mago notify voidcore`
+`0.1.8`. The registry, the resolver, the blast radius, the broadcast, the
+interaction matrix, the desktop host, the NSIS emitter, `bootstrap` and
+Iscariot work against the real repositories — `mago notify voidcore`
 reproduces the 0.2.14 release message that was written by hand, including the
 three verdicts that message admitted were guesses, which it reports as
 unverified rather than guessing again.
@@ -652,7 +680,8 @@ unverified rather than guessing again.
 Not yet built: signing, the update client, the build farm that would make the
 compatibility matrix *true* rather than merely declared, and the desktop GUI.
 The largest coverage gap is unchanged and now visible from inside the tool:
-**seven Void projects still carry no manifest**, and Mago cannot compute a
+**four Void projects still carry no manifest** (Void Buzz, Void Hammer, Void
+Reyna, Void Unity, on 2026-10-30), and Mago cannot compute a
 verdict for a project it has never read. See [okf/index.md §8](okf/index.md)
 for what has to be decided first.
 

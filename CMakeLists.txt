@@ -115,6 +115,14 @@ if(VOIDMAGO_BUILD_TESTS)
   # when they are not there.
   set_tests_properties(family_smoke PROPERTIES
     ENVIRONMENT "VOIDMAGO_FAMILY_ROOT=${CMAKE_CURRENT_SOURCE_DIR}/..")
+
+  # Iscariot is Python and standard library only; without a Python the
+  # binary's tests still run.
+  find_package(Python3 COMPONENTS Interpreter QUIET)
+  if(Python3_FOUND)
+    add_test(NAME iscariot_smoke
+             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/iscariot/iscariot_smoke.py)
+  endif()
 endif()
 
 # ── The desktop host ─────────────────────────────────────────────────────────

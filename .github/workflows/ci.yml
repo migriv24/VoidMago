@@ -1,0 +1,49 @@
+# CI for Void Mago: does `mago` build and pass on all three platforms it claims,
+# and does this repository publish nothing it should not?
+#
+# The smoke tests build a miniature family in a temp directory, so they need no
+# sibling checkouts; family_smoke skips itself in a bare clone. Iscariot runs
+# without the private-terms list (that list is never in a repository or a
+# runner), so here it checks shapes only: credentials, correspondence, emails,
+# phone numbers, home directories. The names are checked on a maintainer's
+# machine, where ~/.mago/private-terms exists.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: build
+        run: cmake --build build --config Release
+      - name: test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  iscariot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: nothing is published that should not be
+        env:
+          MAGO_HOME: ${{ runner.temp }}/mago
+        run: python iscariot/iscariot.py scan . --history --strict -v
