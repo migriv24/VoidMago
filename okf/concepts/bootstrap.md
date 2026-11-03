@@ -86,8 +86,8 @@ libraries' code has moved past the version they declare:
 
 | library | declares | since that version was set |
 |---|---|---|
-| Void Core | 0.2.15 | prose and CI only. **Tag `v0.2.15` at `main`.** |
-| Void Rancho | 0.1.0 | first publication. **Tag `v0.1.0` when it is pushed.** |
+| Void Core | 0.2.15 | prose and CI only. **Tagged `v0.2.15` at `main`, 2026-11-02.** |
+| Void Rancho | 0.1.0 | first publication. **Tagged `v0.1.0`, published 2026-11-02.** |
 | Void Maiz | 0.1.0 (2026-09-01) | graph analysis, portable and iOS apps, `maiz::RanchoLink` |
 | Void Palabra | 0.1.0 (2026-09-01) | sync protocol, replicas, Reticulum |
 | Void Allomone | 0.1.0 (2026-09-01) | additions to its public headers |
