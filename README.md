@@ -634,6 +634,8 @@ secret. Iscariot never prints what it matched. See
 
 - **Not Void Palabra.** Palabra moves *data between peers* at runtime. Mago
   moves *software versions onto machines* at install time.
+- **Not Void Rancho.** Rancho is the family's database. Mago keeps no data that
+  needs one: it reads manifests fresh on every run.
 - **Not the Antfarm.** The Antfarm is an operator configuring their own
   services. Mago is the family maintaining itself.
 - **Not a package manager for third-party code.** The family vendors its

@@ -80,8 +80,32 @@ tested. It has nothing to choose from until the libraries tag the versions their
 manifests already declare. `mago notify` is the natural place to remind a
 release to tag itself.
 
+**Measured again on 2026-11-02, with Void Rancho as the fifth pillar.** Still
+no library carries a tag, and a tag cannot simply be added now, because most
+libraries' code has moved past the version they declare:
+
+| library | declares | since that version was set |
+|---|---|---|
+| Void Core | 0.2.15 | prose and CI only. **Tag `v0.2.15` at `main`.** |
+| Void Rancho | 0.1.0 | first publication. **Tag `v0.1.0` when it is pushed.** |
+| Void Maiz | 0.1.0 (2026-09-01) | graph analysis, portable and iOS apps, `maiz::RanchoLink` |
+| Void Palabra | 0.1.0 (2026-09-01) | sync protocol, replicas, Reticulum |
+| Void Allomone | 0.1.0 (2026-09-01) | additions to its public headers |
+| Void Jelly | 0.1.0 (2026-10-05) | about 9 900 lines, cgltf vendored |
+
+Tagging the last four at the commit that set `0.1.0` would be accurate and
+harmful: bootstrap would hand every requirer (all of them `*`) the September
+code, not the code they have been built and tested against (Rancho's
+superproject build needs Maiz's `voidmaiz_graph` target, added 2026-11-02).
+Each of the four needs a version bump with a `release` block first, and that
+is its own agent's decision. Each was told on 2026-11-02.
+
 **Name repositories on the edges.** Void Hormiga's `requires` carry them as of
 2026-10-24. A required dependency that names none fails with the field to add.
+On 2026-11-02 only Hormiga and Rancho (named while publishing it) did. The
+edges of FaultSack, Interaction Combinators, Void Chisme, Void Jelly, Void
+Loops Studio, Void Maiz, Void Squid and Void Verguenza carry none, so none of
+those can be bootstrapped yet. Each was told.
 
 # Measured
 

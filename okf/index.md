@@ -70,6 +70,10 @@ Three jobs, in the order they are worth building:
   moves **data between peers**, at runtime, per document, with security.
   Mago moves **software versions onto machines**, at install time, per release.
   They share concepts and share nothing operationally.
+- **Not Void Rancho.** Rancho *is* a database: it stores, indexes, queries and
+  pages runes and mantles. Mago keeps no data that needs one. Its inputs are
+  manifests that other repositories own, read fresh on every run, and its
+  authored state is one small `family.json`.
 - **Not the Antfarm.** The Antfarm is an operator configuring *their own*
   services — a database, a deploy target, a translation holiday. Mago is the
   family maintaining *itself*. An outreach organization uses the Antfarm every
@@ -130,6 +134,39 @@ that vocabulary rather than inventing a second one:
 | **runtime** | Void Core, Void Maiz, Void Allomone | no — never learns the name | installs it *inside* an application; never lists it separately |
 | **capability** | Void Palabra | no — you develop *with* it | may be an optional component |
 | **application** | Void Hormiga, Void Reyna | yes | the thing a person installs, updates and sees |
+
+## The pillars: the libraries every application stands on
+
+The kinds above say what a user sees. A second sort decides what `blast` is
+for: a few libraries sit under nearly every Void application, so changing one
+of them reaches most of the family. Since 2026-10-30 there are five:
+
+| pillar | what it owns | how applications bind it |
+|---|---|---|
+| **Void Core** | the structure and the command language. No I/O, by definition | shared library |
+| **Void Maiz** | the view: the GUI, and one app shape for desktop and phones | static |
+| **Void Allomone** | derivation: annotations and their lattice merge | static |
+| **Void Palabra** | canonical bytes, content names, merge, history, sync between peers | static |
+| **Void Rancho** | the database: runes and mantles stored, indexed, queried and paged at any size, clustering, and the matrix view a learned model reads | static (no application links it yet; Hormiga is first) |
+
+**Void Rancho is the newest, and it matters as much as Palabra.** Void Core's
+author ruled on 2026-10-30 (`VoidCore:okf/design/the-transition.md`, pillar
+B) that the database belongs in a dedicated library one layer above Core,
+because every application had been building its own. Hormiga built a SQLite
+store and a cluster-paged working set; Squid copied that schema. Rancho is
+that store, extracted and generalized. Its 0.1.0 keeps Hormiga's API, so
+Hormiga moves by a namespace change. Palabra names and reconciles; Rancho
+stores. Palabra's content hash names Rancho's snapshot segments. Neither
+links the other.
+
+Two rules hold for every pillar, because `mago bootstrap` depends on both:
+
+- **A pillar is released, not borrowed from a branch.** `mago bootstrap`
+  chooses the newest *tag* every requirer accepts. A pillar with no tag at
+  the version its manifest declares is taken from its default branch on
+  trust ([bootstrap](concepts/bootstrap.md)).
+- **Every edge to a pillar names its repository.** Bootstrap cannot clone a
+  dependency whose address nobody wrote down.
 
 The consequence for Mago's UI: **a normal user's list has one row per
 application.** Runtime dependencies are an implementation detail of a release,

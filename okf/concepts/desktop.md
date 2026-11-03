@@ -245,6 +245,11 @@ Mago is not storing a document a person authored over years; it is reading
 manifests that other repositories own, and the moment those become a synced
 store, the repositories stop being the source of truth.
 
+Void Rancho, the family's database since 2026-10-30, is the same answer
+again. A registry of twenty manifests and one authored table is not a
+workload for a database, and a store would make Mago's copy the thing people
+trust instead of the repositories.
+
 Void Allomone is the same answer for a different reason: nothing in Desktop
 derives anything, so there is nothing for a logic DSL to do. Both stay
 declined until something asks for them.
