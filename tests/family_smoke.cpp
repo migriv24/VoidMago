@@ -50,8 +50,10 @@ int main() {
     CHECK(reg.contains("voidcore"));
     CHECK(reg.contains("voidhormiga"));
 
-    // Hormiga builds five projects and ships exactly one runtime file: Void
-    // Core's DLL. Maiz, Allomone and Palabra are compiled in.
+    // Hormiga builds seven projects and ships exactly one runtime file: Void
+    // Core's DLL. Maiz, Allomone, Palabra, Rancho (since 0.2.4) and Hammer
+    // (required since Maiz's main forwards its networking there, 2026-11-02)
+    // are compiled in.
     const Plan plan = resolve(reg, "voidhormiga", "windows-x64");
     std::set<std::string> shipped_runtimes;
     for (const auto& r : plan.payload) {
@@ -59,7 +61,8 @@ int main() {
     }
     CHECK(shipped_runtimes == (std::set<std::string>{"voidcore"}));
     CHECK(names(plan.absorbed) ==
-          (std::set<std::string>{"voidmaiz", "voidallomone", "voidpalabra"}));
+          (std::set<std::string>{"voidmaiz", "voidallomone", "voidpalabra", "voidrancho",
+                                 "voidhammer"}));
 
     // An additive Void Core release rebuilds nothing. This is the claim the
     // whole project rests on, checked against the real graph.

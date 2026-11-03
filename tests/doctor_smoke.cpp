@@ -97,6 +97,62 @@ void a_void_project_without_a_manifest_is_visible() {
     CHECK(has_finding(Registry::scan(t.path()).check(), "note", "carries no void.json"));
 }
 
+// A repository with no remote: `.git/config` exists and names none.
+void git_init_without_remote(const TempDir& t, const std::string& dir) {
+    t.file(dir + "/.git", "config", "[core]\n\trepositoryformatversion = 0\n");
+}
+
+// Void Hammer, 2026-11-02: Hormiga required it, Maiz's CMake reached into it
+// with a manifest that never named it, and it had no remote. Doctor said only
+// that it "looks like a Void project".
+void a_folder_the_family_builds_from_is_named_with_its_builders() {
+    TempDir t;
+    mago::test::write_toy(t);
+    t.project("hormiga", R"("name":"hormiga","display_name":"Hormiga","kind":"application",
+        "version":"1.0.0","identity":{"app_id":"org.example.h"},
+        "requires":[{"name":"voidhammer","sibling":"../VoidHammer","link":"static"}])");
+    t.file("view", "CMakeLists.txt",
+           "set(VOIDHAMMER_ROOT \"${CMAKE_CURRENT_SOURCE_DIR}/../VoidHammer\" CACHE PATH \"\")\n");
+    t.file("VoidHammer/net", "CMakeLists.txt", "# networking\n");
+    git_init_without_remote(t, "VoidHammer");
+
+    const auto f = Registry::scan(t.path()).check();
+    CHECK(has_finding(f, "warn", "hormiga (requires it)"));
+    CHECK(has_finding(f, "warn", "view (its CMakeLists.txt reaches ../VoidHammer"));
+    CHECK(has_finding(f, "warn", "no git remote either"));
+    CHECK(!has_finding(f, "note", "looks like a Void project"));
+}
+
+void a_cmake_reach_must_name_the_whole_folder() {
+    TempDir t;
+    mago::test::write_toy(t);
+    t.file("view", "CMakeLists.txt", "add_subdirectory(../VoidGhostTools tools)\n");
+    std::filesystem::create_directories(t.path() / "VoidGhost");
+    const auto f = Registry::scan(t.path()).check();
+    CHECK(has_finding(f, "note", "looks like a Void project"));
+    CHECK(!has_finding(f, "warn", "builds from it"));
+}
+
+void a_reached_folder_outside_git_says_so() {
+    TempDir t;
+    mago::test::write_toy(t);
+    t.file("view", "CMakeLists.txt", "add_subdirectory(../VoidGhost ghost)\n");
+    std::filesystem::create_directories(t.path() / "VoidGhost");
+    CHECK(has_finding(Registry::scan(t.path()).check(), "warn", "not a git repository either"));
+}
+
+// The half that outlives the manifest: once Hammer has a void.json, a
+// checkout with nowhere to clone from still strands everyone who requires it.
+void a_dependency_with_no_remote_is_warned() {
+    TempDir t;
+    mago::test::write_toy(t);
+    git_init_without_remote(t, "view");
+    const auto f = Registry::scan(t.path()).check();
+    CHECK(has_finding(f, "warn", "requires view, whose checkout"));
+    t.file("view/.git", "config", "[remote \"origin\"]\n\turl = https://example.org/view\n");
+    CHECK(!has_finding(Registry::scan(t.path()).check(), "warn", "no git remote"));
+}
+
 void an_application_that_is_linked_rather_than_installed_is_a_warning() {
     TempDir t;
     t.project("app", R"("name":"app","display_name":"App","kind":"application","version":"1.0.0")");
@@ -210,6 +266,10 @@ int main() {
     an_unknown_manifest_format_is_refused_rather_than_guessed_at();
     a_wildcard_interaction_counts_as_mentioning_everything();
     a_void_project_without_a_manifest_is_visible();
+    a_folder_the_family_builds_from_is_named_with_its_builders();
+    a_cmake_reach_must_name_the_whole_folder();
+    a_reached_folder_outside_git_says_so();
+    a_dependency_with_no_remote_is_warned();
     an_application_that_is_linked_rather_than_installed_is_a_warning();
     a_repository_that_contradicts_its_own_manifest_is_an_error();
     a_repository_that_agrees_with_itself_says_nothing();

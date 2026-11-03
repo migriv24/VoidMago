@@ -25,6 +25,16 @@ struct Finding {
     std::string message;
 };
 
+// Can another machine get this checkout? Read from `.git/config` as a file:
+// the CLI runs no git for a check that needs no network.
+enum class GitRemote {
+    NotARepository,  // no `.git` at all
+    None,            // a repository with nowhere to push or clone from
+    Some,            // at least one `[remote "..."]`
+    Unknown,         // `.git` is a file (a worktree, a submodule), or unreadable
+};
+GitRemote git_remote_state(const std::filesystem::path& dir);
+
 class Registry {
 public:
     // Read every manifest one directory deep under `root`. Directories whose
@@ -101,6 +111,7 @@ private:
     void check_vendors(const Manifest& m, std::vector<Finding>& out) const;
     void check_release(const Manifest& m, std::vector<Finding>& out) const;
     void check_cycles(std::vector<Finding>& out) const;
+    void check_unmanifested(std::vector<Finding>& out) const;
 
     std::vector<std::filesystem::path> roots_;
     std::map<std::string, Manifest> projects_;

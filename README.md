@@ -247,6 +247,23 @@ The 0.2.14 message named both of them, and both are now checks:
 - **A partner nobody re-read.** A project named in `interacts_with` that has no
   manifest in the registry is now reported, standing still and in every blast.
 
+A third check came from a gap Void Hormiga found (2026-10-18, built
+2026-11-02): **a folder the family builds from that no manifest describes.**
+Void Hammer was one for two weeks. Hormiga's networking compiled out of it
+through Void Maiz's CMake, and `doctor` only said it "looks like a Void
+project". Now a folder with no `void.json` that some project requires, or whose
+top-level `CMakeLists.txt` names it as `../<Folder>`, is a **warning** naming
+who builds from it. If the folder, or any required checkout, is a git
+repository with no remote, the finding says that no other machine can build
+its dependents. `doctor` reads `.git/config` as a file; it runs no git.
+
+```
+ warn  VoidHammer   carries no void.json, and voidhormiga (requires it), voidmaiz (its
+                    CMakeLists.txt reaches ../VoidHammer, and its manifest does not say so)
+                    build from it: a change there reaches them with no verdict. It has no
+                    git remote either, so no machine without this folder can build them
+```
+
 ## The interaction matrix
 
 Every pair of Void projects in one table, because the useful question is almost

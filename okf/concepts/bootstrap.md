@@ -42,8 +42,12 @@ fix, and is never checked out, pulled or deleted.
 
 **Optional dependencies** (`"optional": true`) are reported as absent when
 they have no repository or no remote. They are never a failure. `plan` and
-`doctor` treat them the same way: Hormiga builds without Void Hammer, and a
-registry without it is a note, not an error.
+`doctor` treat them the same way: a registry without one is a note, not an
+error. Void Hammer was the example until 2026-11-02, when Void Maiz's `main`
+began forwarding its networking headers to Hammer and Hormiga made it
+required. Since then a Hammer with no manifest stops `plan` and `stage` for
+Hormiga, and a Hammer with no remote leaves Hormiga unbuildable on every
+machine but one. `doctor` names both (README, "`mago doctor` checks").
 
 # The version rule
 

@@ -42,9 +42,9 @@ struct Requirement {
     // cloned: the edge has to carry the address.
     std::string repository;
 
-    // The consumer builds without it (Void Hormiga without Void Hammer builds
-    // with networking absent). A missing optional dependency is reported, never
-    // an error, by `plan`, `doctor` and `bootstrap`.
+    // The consumer builds without it (until 2026-11-02, Void Hormiga without
+    // Void Hammer built with networking absent). A missing optional dependency
+    // is reported, never an error, by `plan`, `doctor` and `bootstrap`.
     bool optional = false;
 
     // Does this dependency become a FILE ON DISK next to the binary?

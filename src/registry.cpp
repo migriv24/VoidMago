@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <fstream>
 #include <map>
 #include <set>
+#include <sstream>
 
 #include "mago/vendors.hpp"
 #include "mago/versions.hpp"
@@ -17,6 +19,39 @@ std::string lower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return s;
+}
+
+// Are two paths the same folder? Canonical where possible, so
+// `app/../VoidHammer` and `VoidHammer/` agree; lexical when that fails.
+bool same_dir(const fs::path& a, const fs::path& b) {
+    std::error_code ec1, ec2;
+    const fs::path ca = fs::weakly_canonical(a, ec1);
+    const fs::path cb = fs::weakly_canonical(b, ec2);
+    if (ec1 || ec2) return a.lexically_normal() == b.lexically_normal();
+    return ca == cb;
+}
+
+// Does a project's top-level CMakeLists.txt reach into `../<folder>`? This is
+// the edge no manifest records: Void Maiz's CMake adds ../VoidHammer/net as a
+// subdirectory, and its void.json names no Void Hammer. Only the top-level
+// file is read; a sibling is reached from the root in every Void repository,
+// and walking the tree would read vendored CMake that is nobody's edge.
+bool cmake_reaches(const fs::path& project, const std::string& folder) {
+    std::ifstream in(project / "CMakeLists.txt", std::ios::binary);
+    if (!in) return false;
+    std::ostringstream ss;
+    ss << in.rdbuf();
+    const std::string text = ss.str();
+    const std::string needle = "../" + folder;
+    for (std::size_t at = text.find(needle); at != std::string::npos;
+         at = text.find(needle, at + 1)) {
+        const std::size_t end = at + needle.size();
+        // `../VoidHammer` must not match `../VoidHammerTools`.
+        if (end == text.size()) return true;
+        const unsigned char next = static_cast<unsigned char>(text[end]);
+        if (!std::isalnum(next) && next != '_' && next != '-') return true;
+    }
+    return false;
 }
 
 // "Void Buzz" and "VoidBicho" both look like Void projects.
@@ -89,6 +124,80 @@ Registry Registry::scan(const fs::path& root_in) {
         }
     }
     return reg;
+}
+
+GitRemote git_remote_state(const fs::path& dir) {
+    std::error_code ec;
+    const fs::path git = dir / ".git";
+    if (!fs::exists(git, ec)) return GitRemote::NotARepository;
+    // A `.git` FILE is a worktree or a submodule: its config is elsewhere,
+    // and a guess about it would be a guess.
+    if (!fs::is_directory(git, ec)) return GitRemote::Unknown;
+    std::ifstream in(git / "config", std::ios::binary);
+    if (!in) return GitRemote::Unknown;
+    std::string line;
+    while (std::getline(in, line)) {
+        const auto first = line.find_first_not_of(" \t");
+        if (first != std::string::npos && line.compare(first, 8, "[remote ") == 0) {
+            return GitRemote::Some;
+        }
+    }
+    return GitRemote::None;
+}
+
+// The 2026-10-18 ask, built 2026-11-02: a folder the family BUILDS FROM is not
+// the same gap as a folder that merely looks like a Void project. Void Hammer
+// was both for two weeks -- Hormiga's networking compiled out of it through
+// Void Maiz's CMake -- and doctor said only that it "looks like a Void
+// project". The finding now names who builds from it, and whether any other
+// machine could.
+void Registry::check_unmanifested(std::vector<Finding>& out) const {
+    for (const auto& dir : unmanifested_) {
+        const std::string folder = dir.filename().string();
+        std::vector<std::string> reachers;
+        for (const auto& [name, m] : projects_) {
+            bool by_requires = false;
+            for (const auto& req : m.requirements) {
+                if (!req.sibling.empty() && same_dir(m.path / req.sibling, dir)) {
+                    by_requires = true;
+                    break;
+                }
+            }
+            if (by_requires) {
+                reachers.push_back(name + " (requires it)");
+            } else if (cmake_reaches(m.path, folder)) {
+                reachers.push_back(name + " (its CMakeLists.txt reaches ../" + folder +
+                                   ", and its manifest does not say so)");
+            }
+        }
+
+        if (reachers.empty()) {
+            out.push_back({"note", folder,
+                           std::string("looks like a Void project but carries no ") + kManifestName});
+            continue;
+        }
+
+        std::string who;
+        for (const auto& r : reachers) {
+            if (!who.empty()) who += ", ";
+            who += r;
+        }
+        std::string message = std::string("carries no ") + kManifestName + ", and " + who +
+                              (reachers.size() == 1 ? " builds" : " build") +
+                              " from it: a change there reaches them with no verdict";
+        switch (git_remote_state(dir)) {
+            case GitRemote::None:
+                message += ". It has no git remote either, so no machine without this folder can build them";
+                break;
+            case GitRemote::NotARepository:
+                message += ". It is not a git repository either, so no machine without this folder can build them";
+                break;
+            case GitRemote::Some:
+            case GitRemote::Unknown:
+                break;
+        }
+        out.push_back({"warn", folder, message});
+    }
 }
 
 const Manifest* Registry::get(const std::string& name) const {
@@ -454,6 +563,17 @@ std::vector<Finding> Registry::check(const Family* family) const {
                                "reaches " + req.name + " via \"" + req.via +
                                    "\", an unknown project"});
             }
+            if (git_remote_state(dep->path) == GitRemote::None) {
+                // Only a checkout that IS a repository and has nowhere to push
+                // is reported. A folder that is not under git at all is how
+                // every test family is laid out, and says nothing about other
+                // machines.
+                out.push_back({"warn", m.name,
+                               "requires " + req.name + ", whose checkout at " +
+                                   dep->path.string() +
+                                   " has no git remote: no machine without this folder can build " +
+                                   m.name});
+            }
             if (dep->kind == "application") {
                 out.push_back({"warn", m.name,
                                "requires " + req.name +
@@ -490,11 +610,7 @@ std::vector<Finding> Registry::check(const Family* family) const {
         }
     }
 
-    for (const auto& p : unmanifested_) {
-        out.push_back({"note", p.filename().string(),
-                       std::string("looks like a Void project but carries no ") + kManifestName});
-    }
-
+    check_unmanifested(out);
     check_cycles(out);
     return out;
 }
